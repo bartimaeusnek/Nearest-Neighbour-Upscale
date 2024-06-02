@@ -1,12 +1,15 @@
 # Nearest-Neighbor-Upscale
-C program to quickly perform nearest neighbour upscaling of an image.
-Driver code works on 32bit PNG images. Upscaler functions should work with any image format if you can extract the values of each pixel in the image into an array.
+C program to quickly perform nearest neighbour upscaling of an image.  
+Driver code works on 32bit PNG images. Upscaler functions should work with any image format if you can extract the values of each pixel in the image into an array.  
+Should work anywhere POSIX complient really...  
 
-Pictures are supported roughly up to 32768x32768 pixels.
+Pictures are supported roughly up to 32768x32768 pixels.  
 
-Prebuild downloads are available on the releases page for Windows and Linux, should work anywhere POSIX complient really...
+## Downloads
 
-How to build on Windows:  
+Prebuild downloads are available on the [releases page for Windows and Linux](https://github.com/bartimaeusnek/Nearest-Neighbour-Upscale/releases) or cutting edge builds are under [Actions](https://github.com/bartimaeusnek/Nearest-Neighbour-Upscale/actions). 
+
+## How to build on Windows:  
 
 With CLI:  
 - [install git](https://www.git-scm.com/download/win)  
@@ -22,9 +25,9 @@ Your compiled .exe will be at `<path-to-Nearest-Neighbour-Upscale>\build\Release
 Alternatively you can build this quite easy with [JetBrains CLion](https://www.jetbrains.com/clion/) (Not Sponsored)  
   
   
-How to build on Linux:  
-You might need to install git/clang/gcc and cmake with your package manager:  
-for Ubuntu/Debian/Linux Mint and alike: `sudo apt install git gcc cmake`
+## How to build on Linux:  
+You might need to install git clang or gcc libomp5 libomp-dev and cmake with your package manager:  
+for Ubuntu/Debian/Linux Mint and alike: `sudo apt install git clang gcc cmake libomp5 libomp-dev`
 
 - `git clone --recurse-submodules https://github.com/bartimaeusnek/Nearest-Neighbour-Upscale`
 - `cd Nearest-Neighbour-Upscale`
@@ -33,11 +36,11 @@ for Ubuntu/Debian/Linux Mint and alike: `sudo apt install git gcc cmake`
 
 Your compiled binary file will be at `<path-to-Nearest-Neighbour-Upscale>/build/NearestNeighbourUpscale`
 
-How to use:
+## How to use:
 - `./NearestNeighbourUpscale <INPUT_IMAGE/DIRECTORY> <SCALE>`
   - Where `<INPUT_IMAGE/DIRECTORY>` is the image or directory you want to upscale (local and absolute paths are supported) and `<SCALE>` (optional, default 2) the the scale you want to upscale it by.
 
-Troubleshooting:
+## Troubleshooting:
 
 In the CMakeLists.txt:
 
