@@ -1,0 +1,6 @@
+[submodule "mimalloc"]
+	path = mimalloc
+	url = https://github.com/microsoft/mimalloc.git
+[submodule "lodepng"]
+	path = lodepng
+	url = https://github.com/lvandeve/lodepng.git

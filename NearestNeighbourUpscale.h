@@ -1,23 +1,24 @@
-/*
-	Cole L - 5th January 2022 - https://github.com/cole8888/Nearest-Neighbour-Upscale
-*/
-
 #ifndef NEARESTNEIGHBOURUPSCALE_H
 #define NEARESTNEIGHBOURUPSCALE_H
 
+#include "MimallocOverrideCOnly.h"
+#include <immintrin.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <stdint.h>
 
-// Don't change these, lets the program know how many colour channels there are for RGB and RGBA.
-#define CHANNELS_PER_PIXEL_RGB 3
-#define CHANNELS_PER_PIXEL_RGBA 4
-
-// Performs nearest neighbour upscaling of the original image where each pixel in the original image is expanded into an expanded pixel of size scale^2 in the upscaled image.
-// Used for 32bit RGBA or 24bit RGB images that have been read in as RGBA.
-void upscaleNN_RGBA(u_char *originalImg, u_char *scaledImg, int dimX, int dimY, int scale);
-
-// Performs nearest neighbour upscaling of the original image where each pixel in the original image is expanded into an expanded pixel of size scale^2 in the upscaled image.
-// Used for 24bit RBG images.
-void upscaleNN_RGB(u_char *originalImg, u_char *scaledImg, int dimX, int dimY, int scale);
-
+void upscaleNN_Simple(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+void upscaleNN_Dynamic(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+#if __AVX__
+void upscaleNN_AVX2_8x8(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+void upscaleNN_AVX2_1x8(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+#endif
+#if __SSE3__
+void upscaleNN_SSE3_1x2(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+void upscaleNN_SSE3_2x2(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+void upscaleNN_SSE3_1x4(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+void upscaleNN_SSE3_2x4(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+void upscaleNN_SSE3_4x4(const uint32_t *originalImg, uint32_t *upscaledImg, uint32_t dimX, uint32_t dimY, uint32_t scale);
+#endif
 #endif

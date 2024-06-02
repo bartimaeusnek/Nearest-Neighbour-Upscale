@@ -1,30 +1,59 @@
 # Nearest-Neighbor-Upscale
 C program to quickly perform nearest neighbour upscaling of an image.
-Example driver code works on 24bit or 32bit PNG images. Upscaler functions should work with any image format if you can extract the values of each pixel in the image into a u_char array.
+Driver code works on 32bit PNG images. Upscaler functions should work with any image format if you can extract the values of each pixel in the image into an array.
 
-To use the example driver code:
-- `git clone https://github.com/cole8888/Nearest-Neighbour-Upscale`
+Pictures are supported roughly up to 32768x32768 pixels.
+
+Prebuild downloads are available on the releases page for Windows and Linux, should work anywhere POSIX complient really...
+
+How to build on Windows:  
+
+With CLI:  
+- [install git](https://www.git-scm.com/download/win)  
+- [download Ninja](https://github.com/ninja-build/ninja/releases)  
+- [install cmake](https://cmake.org/download/)  
+- [install clang](https://releases.llvm.org/)
+- `git clone --recurse-submodules https://github.com/bartimaeusnek/Nearest-Neighbour-Upscale`
 - `cd Nearest-Neighbour-Upscale`
-- `make`
-- `./NearestNeighbourUpscale <INPUT_IMAGE.PNG> <SCALE>`
-  - Where `<INPUT_IMAGE.PNG>` is the image you want to upscale and `<SCALE>` the the scale you want to upscale it by.
+- `cmake -S . -B build -G "Ninja Multi-Config" -D CMAKE_C_COMPILER="<path-to-clang>" -D CMAKE_MAKE_PROGRAM="<path-to-ninja>"` (`<path-to-clang>` is usually `C:\Program Files\LLVM\bin`)
+- `cmake --build ./build --config Release`
 
-# How it works:
-For this example we will take this 25x25px image and upscale it to 50x50px.
+Your compiled .exe will be at `<path-to-Nearest-Neighbour-Upscale>\build\Release\NearestNeighbourUpscale.exe`  
+Alternatively you can build this quite easy with [JetBrains CLion](https://www.jetbrains.com/clion/) (Not Sponsored)  
+  
+  
+How to build on Linux:  
+You might need to install git/clang/gcc and cmake with your package manager:  
+for Ubuntu/Debian/Linux Mint and alike: `sudo apt install git gcc cmake`
 
-(Please note I've upscaled the images in this demo by 10x so that they can easily be viewed without zooming in.)
+- `git clone --recurse-submodules https://github.com/bartimaeusnek/Nearest-Neighbour-Upscale`
+- `cd Nearest-Neighbour-Upscale`
+- `cmake -S . -B build`
+- `cmake --build ./build --config Release`
 
-![upscaled_img79](https://user-images.githubusercontent.com/32819560/148020448-0e3c5614-9ea5-4781-9513-26995b7e70e5.png)
+Your compiled binary file will be at `<path-to-Nearest-Neighbour-Upscale>/build/NearestNeighbourUpscale`
 
-- Step 1: Copy the pixels from the original image into the top left corner of each expanded pixel
-![0624](https://user-images.githubusercontent.com/32819560/148003124-f89114e3-4e99-43fb-ac90-34a429cb4c4d.png)
+How to use:
+- `./NearestNeighbourUpscale <INPUT_IMAGE/DIRECTORY> <SCALE>`
+  - Where `<INPUT_IMAGE/DIRECTORY>` is the image or directory you want to upscale (local and absolute paths are supported) and `<SCALE>` (optional, default 2) the the scale you want to upscale it by.
 
-- Step 2: Fill in the top row of each expanded pixel with the data from the topleft-most pixel in that expanded pixel.
-![1249](https://user-images.githubusercontent.com/32819560/148003211-6ee86265-4f49-4d19-b965-95dbbadea093.png)
+Troubleshooting:
 
-- Step 3: Fill in the remaining rows of each expanded pixel with the top row of each expanded pixel.
-![2499](https://user-images.githubusercontent.com/32819560/148003252-d34fb355-287f-4132-acbf-bd6db3b30cc0.png)
+In the CMakeLists.txt:
 
-(See the VIDEO_DEMOS directory if you'd like a visual representation.)
+If you are building for a non-x64 (M1 Macs i.E.) or some even older processor, please turn off
+- `SSE3_BUILD`
+- `AVX_BUILD`
 
-The example driver code uses lodepng which can be found here https://github.com/lvandeve/lodepng
+If you have a Processor older than 2011 please turn off:
+- `AVX_BUILD`
+
+If you are building only for yourself and don't want compability with any processor other than the one you are using to compile this, you might want to turn on:
+- `NATIVE_BUILD`
+
+If you having issues with seemingly random exit codes AND you are running on a non-x64 System or very old System, you can try deleting:
+- `add_compile_definitions(LODEPNG_NO_COMPILE_ALLOCATORS=1)`
+- `-fno-builtin-malloc -fno-builtin-calloc -fno-builtin-realloc -fno-builtin-free`
+- `target_link_libraries(lodepng PUBLIC mimalloc-static)`
+- and replace `target_link_libraries(NearestNeighbourUpscale PUBLIC mimalloc-static lodepng)` with `target_link_libraries(NearestNeighbourUpscale PUBLIC lodepng)`
+- This will disable [mimalloc](https://github.com/microsoft/mimalloc) for the main library and fallback to the default allocator instead

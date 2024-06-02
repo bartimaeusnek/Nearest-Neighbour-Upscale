@@ -1,264 +1,102 @@
-/*
-	Cole L - 5th January 2022 - https://github.com/cole8888/Nearest-Neighbour-Upscale
-
-	Driver program to use the NearestNeighbourUpscale code from a commandline program.
-	Parses the command line arguments, reads in the image from disk, passes it to the appropriate upscaler function and saves the upscaled image to disk.
-*/
-
 #include "NearestNeighbourUpscaleDriver.h"
 
-// Calculate the amount of time in seconds between the provided start and finish timespec structs.
-double getElapsedTime(struct timespec start, struct timespec finish){
-	return (finish.tv_sec - start.tv_sec) + (finish.tv_nsec - start.tv_nsec) / 1000000000.0;
-}
+#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
+#include "unistd.h"
+#else
+#include <unistd.h>
+#include <sys/stat.h>
+#endif
 
-// Functions to determine whether or not a string starts with or ends with a particular string.
-bool endsWith(char *str, char *toCheck){
-	int n = strlen(str);
-	int cl = strlen(toCheck);
-	if(n < cl){
-		return false;
-	}
-	char *subbuff = (char *)malloc(cl * sizeof(char));
-	memcpy(subbuff, &str[n - cl], cl);
-	return (strcmp(subbuff, toCheck) == 0);
-}
-bool startsWith(char *str, char* toCheck){
-	int n = strlen(str);
-	int cl = strlen(toCheck);
-	if(n < cl){
-		return false;
-	}
-	char *subbuff = (char *)malloc(cl * sizeof(char));
-	memcpy(subbuff, &str[0 - cl], cl);
-	return (strcmp(subbuff, toCheck) == 0);
-}
-
-// Construct a filepath from two strings. sizeFile is the number of valid characters in the file string.
-char *path_join(char* dir, char* file, int sizeFile){
-	int size = strlen(dir) + sizeFile + 2;
-	char *buf = (char*)malloc(size*sizeof(char));
-	if(NULL == buf){
-		return NULL;
-	}
-	
-	strcpy(buf, dir);
-
-	// If the path does not end with the path seperator then we need to add it.
-	if(!endsWith(dir, PATH_SEPERATOR)){
-		strcat(buf, PATH_SEPERATOR);
-	}
-	// If the file starts with the path seperator, ignore it.
-	if(startsWith(file, PATH_SEPERATOR)){
-		char *filecopy = strdup(file);
-		if(NULL == filecopy){
-			free(buf);
-			return NULL;
-		}
-		strcat(buf, filecopy + 1);
-		free(filecopy);
-	}
-	else{
-		strcat(buf, file);
-	}
-	return buf;
-}
-
-// Determine how many digits are in a base 10 integer.
-int getIntDigits(int num){
-	int digits = 0;
-	while(num != 0){
-		num /= 10;
-		++digits;
-	}
-	return digits;
-}
-
-// Save the image, do not overwrite any previous images.
-void saveImg(u_char *img, int dimX, int dimY){
-	char *cwd = get_current_dir_name();	// Current working directory.
-	char ext[] = ".png";	// File extention. Must be .PNG
-	char buff[FILENAME_BUFFER_SIZE];	// Buffer to store the filename while we figure out what the file should be called.
-	char *file;	// Once we settle on a filename, this will hold it.
-
-	// See if an image with this name exists. If so, append a number and keep incrementing that number until we find one where that name is not in use.
-	sprintf(buff, "%s%s", DEFAULT_FILENAME, ext);
-	if(access(path_join(cwd, buff, strlen(DEFAULT_FILENAME) + strlen(ext)), F_OK) == 0){
-		// File with this filename already exists. Let's try another one.
-		int num = 2;	// Start by trying to append the number 2.
-		int digits = 1;	// 2 has one digit.
-		sprintf(buff, "%s%d%s", DEFAULT_FILENAME, num, ext);
-		
-		// Increment the appended number until we find a name that is not in use.
-		while(access(path_join(cwd, buff, digits + strlen(DEFAULT_FILENAME) + strlen(ext)), F_OK) == 0){
-			num++;
-			digits = getIntDigits(num);
-			sprintf(buff, "%s%d%s", DEFAULT_FILENAME, num, ext);
-		}
-		
-		// Save the filename with the number at the end.
-		sprintf(buff, "%s%d%s", DEFAULT_FILENAME, num, ext);
-		file = path_join(cwd, buff, digits + strlen(DEFAULT_FILENAME) + strlen(ext));
-	}
-	else{
-		// File with this name does not exist, lets use this name for the new file.
-		sprintf(buff, "%s%s", DEFAULT_FILENAME, ext);
-		file = path_join(cwd, buff, strlen(DEFAULT_FILENAME) + strlen(ext));
-	}
-
-	// If the filename is NULL for some reason, let the user know, but still try to save saving the image. (Since this might have taken a long time to compute and there is no need to exit for this error.)
-	if(NULL == file){
-		fprintf(stderr, "\nError when making filename, it is NULL. Will attempt saving anyway using backup filename\n");
-		file = BACKUP_FILENAME;
-	}
-
-	// Start the timer and then save the image.
-	struct timespec start, finish;
-	clock_gettime(CLOCK_MONOTONIC, &start);
-	unsigned error;
-	
-	if(CHANNELS_PER_PIXEL == 4){
-		error = lodepng_encode32_file(file, img, dimX, dimY);
-	}
-	else if(CHANNELS_PER_PIXEL == 3){
-		error = lodepng_encode24_file(file, img, dimX, dimY);
-	}
-	else{
-		fprintf(stderr, "CHANNELS_PER_PIXEL in the header file is not a valid value. Must be 3 or 4.\n");
-		exit(EXIT_FAILURE);
-	}
-	
-	clock_gettime(CLOCK_MONOTONIC, &finish);
-
-	// See if there was an issue when saving the image.
-	if(error){
-		fprintf(stderr, "\nUnable to save the image, lodepng returned an error.\nError %u: %s\n", error, lodepng_error_text(error));
-	}
-	else{
-		printf("Saved to %s (%f secs)\n", file, getElapsedTime(start, finish));
-	}
-}
-
-// Load the image from disk. (Handles RGBA (32bit) and RGB (24bit) without issue, so use by default).
-bool loadImgRGBA(u_char** img, u_int* width, u_int* height, char* filename){
-	u_char *png = 0;
+bool loadImgRGBA(uint8_t** img, uint32_t* width, uint32_t* height, char* filename){
+    uint8_t *png = NULL;
 	size_t pngsize;
 	LodePNGState state;
 
 	lodepng_state_init(&state);
 
-	unsigned error = lodepng_load_file(&png, &pngsize, filename);	// Load the file from disk into a temporary buffer in memory.
+	unsigned error = lodepng_load_file(&png, &pngsize, filename);
 	if(!error){
 		error = lodepng_decode(img, width, height, &state, png, pngsize);
 		if(error){
 			printf("Lodepng encountered an error.\nError: %u, %s\n", error, lodepng_error_text(error));
-			return false;
+            exit(EXIT_FAILURE);
 		}
 		free(png);
+        size_t channels = lodepng_get_channels(&state.info_raw);
 		lodepng_state_cleanup(&state);
-		return true;
+		return channels == 4;
 	}
 	else{
 		printf("Lodepng encountered an error.\nError: %u, %s\n", error, lodepng_error_text(error));
-		return false;
+        exit(EXIT_FAILURE);
 	}
 }
 
-// Load the image from disk. RGBA images will be stripped of their alpha channel.
-bool loadImgRGB(u_char** img, u_int* width, u_int* height, char* filename){
-	u_char *png = 0;
-	size_t pngsize;
 
-	unsigned error = lodepng_load_file(&png, &pngsize, filename);	// Load the file from disk into a temporary buffer in memory.
-	if(!error){
-		error = lodepng_decode24(img, width, height, png, pngsize);
-		if(error){
-			printf("Lodepng encountered an error.\nError: %u, %s\n", error, lodepng_error_text(error));
-			return false;
-		}
-		free(png);
-		return true;
-	}
-	else{
-		printf("Lodepng encountered an error.\nError: %u, %s\n", error, lodepng_error_text(error));
-		return false;
-	}
+void LoadImageFromDisk(char *filename, uint8_t **img, uint32_t *dimX,
+                         uint32_t *dimY) {
+    bool loaded = loadImgRGBA(img, dimX, dimY, filename);
+    if(!loaded) {
+        if (*img != NULL)
+            free((*img));
+        exit(EXIT_FAILURE);
+    }
 }
 
-// Parse the arguments and coordinate the calling of other functions.
-int main(int argc, char *argv[]){
-	// Make sure there are exactly 2 arguments.
-	if(argc != 3){
-		fprintf(stderr, "No input filename, and/or no scale provided.\nUsage: ./upscale <INPUT_IMAGE> <SCALE>\n");
-		return EXIT_FAILURE;
-	}
-	char *filename = argv[1];	// Read in the input image filename from the commandline arguments.
-	int scale = 0;
+void UpscaleImage(char *filename, uint32_t scale) {
+    uint8_t *img = NULL;
+    uint32_t dimX = 0;
+    uint32_t dimY = 0;
+    LoadImageFromDisk(filename, &img, &dimX, &dimY);
 
-	// Read in the scale from the command line args.
-	char *temp;
-	long value = strtol(argv[2], &temp, 10);
-	if(temp != argv[2] && *temp == '\0'){
-		scale = (int)value;
-		if(scale < 1){
-			fprintf(stderr, "Invalid data in scale argument. Must be a non-zero integer.\nUsage: ./upscale <INPUT_IMAGE> <SCALE>\n");
-			return EXIT_FAILURE;
-		}
-	}
-	else{
-		fprintf(stderr, "Invalid data in scale argument. Must be a non-zero integer.\nUsage: ./upscale <INPUT_IMAGE> <SCALE>\n");
-		return EXIT_FAILURE;
-	}
+    uint32_t scaledDimX = dimX * scale;
+    uint32_t scaledDimY = dimY * scale;
+    uint32_t maxScaledPixel = scaledDimX * scaledDimY;
 
-	u_char *img = 0;	// Place to hold the original image we read from disk.
-	u_int dimX = 0;	// Width of the original image.
-	u_int dimY = 0;	// Height of the original image.
+    uint32_t *upscaledImg = (uint32_t*)malloc((size_t)maxScaledPixel * (size_t)sizeof(uint32_t));
 
-	// Load the image from disk.
-	if(CHANNELS_PER_PIXEL == 4){
-		// Image will be read as RGBA. If image is actually RGB it's okay, the alpha channel for all pixel will just be filled with 255.
-		if(!loadImgRGBA(&img, &dimX, &dimY, filename)){
-			return EXIT_FAILURE;
-		}
-	}
-	else if(CHANNELS_PER_PIXEL == 3){
-		// Image will be read as RGB. If image is actually RGBA then the alpha channel will be ignored.
-		if(!loadImgRGB(&img, &dimX, &dimY, filename)){
-			return EXIT_FAILURE;
-		}
-	}
-	else{
-		fprintf(stderr, "CHANNELS_PER_PIXEL in the header file is not a valid value. Must be 3 or 4.\n");
-		return EXIT_FAILURE;
-	}
+    if(NULL == upscaledImg) {
+        fprintf(stderr, "Unable to allocate upscaledImg array... May have run out of RAM.\n");
+        free(img);
+        exit(EXIT_FAILURE);
+    }
 
-	// Allocate memory for the upscaled image.
-	u_char *upscaledImg = (u_char *)malloc((dimX*scale) * (dimY*scale) * CHANNELS_PER_PIXEL * sizeof(u_char));
-	if(NULL == upscaledImg){
-		fprintf(stderr, "Unable to allocate upscaledImg array... May have run out of RAM.\n");
-		return EXIT_FAILURE;
-	}
-
-	printf("Start upscaling the image...\n");
-
-	struct timespec start, finish;
-	clock_gettime(CLOCK_MONOTONIC, &start);	// Start the timer.
-
-	if(CHANNELS_PER_PIXEL == 4){
-		upscaleNN_RGBA(img, upscaledImg, (int)dimX, (int)dimY, scale);	// Upscale the RGBA image.
-	}
-	else if(CHANNELS_PER_PIXEL == 3){
-		upscaleNN_RGB(img, upscaledImg, (int)dimX, (int)dimY, scale);	// Upscale the RGB image.
-	}
-	
-	clock_gettime(CLOCK_MONOTONIC, &finish);	// Stop the timer.
-	printf("Finished upscaling the image.\t(%f secs)\n", getElapsedTime(start, finish));
-	
-	free(img);	// Free the original image.
-
-	printf("\nStart saving the image...\n");
-	saveImg(upscaledImg, dimX*scale, dimY*scale);	// Save the upscaled image to disk.
-	
-	free(upscaledImg);	// Free the upscaled image,
-	return EXIT_SUCCESS;
+#if __AVX__
+    if (scale % 8 == 0 && dimX % 8 == 0) {
+        upscaleNN_AVX2_8x8((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else if (scale % 8 == 0) {
+        upscaleNN_AVX2_1x8((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else
+#endif
+#if __SSE3__
+    if (scale % 4 == 0 && dimX % 4 == 0) {
+        upscaleNN_SSE3_4x4((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else if (scale % 4 == 0 && dimX % 2 == 0) {
+        upscaleNN_SSE3_2x4((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else if (scale % 4 == 0) {
+        upscaleNN_SSE3_1x4((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else if (scale % 2 == 0 && dimX % 2 == 0) {
+        upscaleNN_SSE3_2x2((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else if (scale % 2 == 0) {
+        upscaleNN_SSE3_1x2((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    else
+#endif
+    {
+        if (scale <= 3)
+            upscaleNN_Simple((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+        else
+            upscaleNN_Dynamic((const uint32_t *) img, upscaledImg, dimX, dimY, scale);
+    }
+    free(img);
+#ifndef DEBUG
+    lodepng_encode32_file(filename, (const unsigned char *) upscaledImg, (size_t)dimX * scale, (size_t)dimY * scale);
+#endif
+    free(upscaledImg);
 }
