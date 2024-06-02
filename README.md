@@ -23,8 +23,8 @@ Alternatively you can build this quite easy with [JetBrains CLion](https://www.j
   
   
 How to build on Linux:  
-You might need to install git/clang/gcc and cmake with your package manager:  
-for Ubuntu/Debian/Linux Mint and alike: `sudo apt install git gcc cmake`
+You might need to install git clang or gcc libomp5 libomp-dev and cmake with your package manager:  
+for Ubuntu/Debian/Linux Mint and alike: `sudo apt install git clang gcc cmake libomp5 libomp-dev`
 
 - `git clone --recurse-submodules https://github.com/bartimaeusnek/Nearest-Neighbour-Upscale`
 - `cd Nearest-Neighbour-Upscale`
