@@ -20,7 +20,11 @@ jobs:
       run: cmake -B ${{github.workspace}}/build -G "Ninja Multi-Config"
     - name: Build  
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
-      
+    - uses: actions/upload-artifact@v4
+      with:
+           name: NearestNeighbourUpscale-Win
+           path: ${{github.workspace}}/build/Release/NearestNeighbourUpscale.exe
+           
   build-linux:
     runs-on: ubuntu-latest
     steps:
@@ -35,3 +39,7 @@ jobs:
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - uses: actions/upload-artifact@v4
+      with:
+           name: NearestNeighbourUpscale-Linux
+           path: ${{github.workspace}}/**/NearestNeighbourUpscale
