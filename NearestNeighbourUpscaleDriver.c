@@ -1,12 +1,5 @@
 #include "NearestNeighbourUpscaleDriver.h"
 
-#if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
-#include "unistd.h"
-#else
-#include <unistd.h>
-#include <sys/stat.h>
-#endif
-
 bool loadImgRGBA(uint8_t** img, uint32_t* width, uint32_t* height, char* filename){
     uint8_t *png = NULL;
 	size_t pngsize;
